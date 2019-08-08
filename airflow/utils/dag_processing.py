@@ -22,6 +22,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
 import logging
 import multiprocessing
 import os
@@ -301,16 +302,20 @@ def fetch_processed_files():
     processed_files = set()
 
     try:
-        with open("processed_files", "r") as list_of_files:
-            for i in list_of_files:
-                processed_files.add(i.strip())
+        with open("/opt/airflow/dags/processed_files.json", "r") as json_file:
+            processed_files = set(json.load(json_file))
     finally:
         return processed_files
 
+
 def add_processed_files(processed_files):
-    with open("processed_files", "w") as list_of_files:
-        for i in processed_files:
-            list_of_files.write(i + "\n")
+    """
+    processed_files is a set of DAG filenames already processed.
+    Convert to list and then save it as a JSON.
+    """
+    processed_files = list(processed_files)
+    with open("/opt/airflow/dags/processed_files.json", "w") as outfile:
+        json.dump(processed_files, outfile)
 
 def list_py_file_paths(directory, safe_mode=True,
                        include_examples=None):
@@ -385,9 +390,10 @@ def list_py_file_paths(directory, safe_mode=True,
                     if not might_contain_dag:
                         continue
 
-                    if not file_path in already_processed_files:
+                    file_name = filepath.split("/")[-1]
+                    if not file_name in already_processed_files:
                         file_paths.append(file_path)
-                        already_processed_files.add(file_path)
+                        already_processed_files.add(file_name)
 
                 except Exception:
                     log = LoggingMixin().log

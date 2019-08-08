@@ -390,7 +390,7 @@ def list_py_file_paths(directory, safe_mode=True,
                     if not might_contain_dag:
                         continue
 
-                    file_name = filepath.split("/")[-1]
+                    file_name = file_path.split("/")[-1]
                     if not file_name in already_processed_files:
                         file_paths.append(file_path)
                         already_processed_files.add(file_name)

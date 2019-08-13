@@ -55,6 +55,9 @@ from airflow.utils import timezone
 from airflow.utils.helpers import reap_process_group
 from airflow.utils.db import provide_session
 from airflow.utils.log.logging_mixin import LoggingMixin
+from airflow.utils.state import State
+from airflow.api.common.experimental.get_dag_runs import get_dag_runs
+
 
 if six.PY2:
     ConnectionError = IOError
@@ -390,10 +393,16 @@ def list_py_file_paths(directory, safe_mode=True,
                     if not might_contain_dag:
                         continue
 
-                    file_name = file_path.split("/")[-1]
-                    if not file_name in already_processed_files:
+                    file_name = file_path.split("/")[-1].split(".")[0]
+                    succeed_dagruns = get_dag_runs(file_name, State.SUCCESS, with_url=False)
+                    failed_dagruns = get_dag_runs(file_name, State.FAILED, with_url=False)
+
+                    log = LoggingMixin().log
+                    #log.info("DAG %s running $s failed %s", file_name, len(succeed_dagruns), len(failed_dagruns))
+                    # if no run is neither succeeded or failed
+                    if len(succeed_dagruns) == 0 and len(failed_dagruns) == 0:
                         file_paths.append(file_path)
-                        already_processed_files.add(file_name)
+
 
                 except Exception:
                     log = LoggingMixin().log

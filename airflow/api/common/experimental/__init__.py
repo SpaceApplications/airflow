@@ -21,12 +21,12 @@ from datetime import datetime
 from typing import Optional
 
 from airflow.exceptions import DagNotFound, TaskNotFound, DagRunNotFound
-from airflow.models import DagBag, DagModel, DagRun
+import airflow.models
 
 
 def check_and_get_dag(dag_id, task_id=None):  # type: (str, Optional[str]) -> DagModel
     """Checks that DAG exists and in case it is specified that Task exist"""
-    dagbag = DagBag()
+    dagbag = airflow.models.DagBag()
     if dag_id not in dagbag.dags:
         error_message = "Dag id {} not found".format(dag_id)
         raise DagNotFound(error_message)

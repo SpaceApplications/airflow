@@ -21,11 +21,11 @@ from typing import Optional, List, Dict, Any
 
 from flask import url_for
 
-from airflow.api.common.experimental import check_and_get_dag
-from airflow.models import DagRun
+# from airflow.api.common.experimental import check_and_get_dag
+import airflow.models
 
 
-def get_dag_runs(dag_id, state=None, run_url_route='Airflow.graph'):
+def get_dag_runs(dag_id, state=None, run_url_route='Airflow.graph', with_url=True):
     # type: (str, Optional[str], str) -> List[Dict[str, Any]]
     """
     Returns a list of Dag Runs for a specific DAG ID.
@@ -34,11 +34,11 @@ def get_dag_runs(dag_id, state=None, run_url_route='Airflow.graph'):
     :return: List of DAG runs of a DAG with requested state,
     or all runs if the state is not specified
     """
-    check_and_get_dag(dag_id=dag_id)
+    # check_and_get_dag(dag_id=dag_id)
 
     dag_runs = list()
     state = state.lower() if state else None
-    for run in DagRun.find(dag_id=dag_id, state=state):
+    for run in airflow.models.DagRun.find(dag_id=dag_id, state=state):
         dag_runs.append({
             'id': run.id,
             'run_id': run.run_id,
@@ -48,7 +48,7 @@ def get_dag_runs(dag_id, state=None, run_url_route='Airflow.graph'):
             'start_date': ((run.start_date or '') and
                            run.start_date.isoformat()),
             'dag_run_url': url_for(run_url_route, dag_id=run.dag_id,
-                                   execution_date=run.execution_date)
+                                   execution_date=run.execution_date) if with_url else None
         })
 
     return dag_runs

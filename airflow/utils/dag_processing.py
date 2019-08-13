@@ -301,25 +301,6 @@ def correct_maybe_zipped(fileloc):
 
 COMMENT_PATTERN = re.compile(r"\s*#.*")
 
-def fetch_processed_files():
-    processed_files = set()
-
-    try:
-        with open("/opt/airflow/dags/processed_files.json", "r") as json_file:
-            processed_files = set(json.load(json_file))
-    finally:
-        return processed_files
-
-
-def add_processed_files(processed_files):
-    """
-    processed_files is a set of DAG filenames already processed.
-    Convert to list and then save it as a JSON.
-    """
-    processed_files = list(processed_files)
-    with open("/opt/airflow/dags/processed_files.json", "w") as outfile:
-        json.dump(processed_files, outfile)
-
 def list_py_file_paths(directory, safe_mode=True,
                        include_examples=None):
     """
@@ -332,9 +313,6 @@ def list_py_file_paths(directory, safe_mode=True,
     :return: a list of paths to Python files in the specified directory
     :rtype: list[unicode]
     """
-
-    # we fetch already processed files
-    already_processed_files = fetch_processed_files()
 
     if include_examples is None:
         include_examples = conf.getboolean('core', 'LOAD_EXAMPLES')
@@ -411,9 +389,6 @@ def list_py_file_paths(directory, safe_mode=True,
         import airflow.example_dags
         example_dag_folder = airflow.example_dags.__path__[0]
         file_paths.extend(list_py_file_paths(example_dag_folder, safe_mode, False))
-
-    # we save already processed files
-    add_processed_files(already_processed_files)
 
     return file_paths
 

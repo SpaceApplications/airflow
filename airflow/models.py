@@ -41,6 +41,7 @@ import json
 import logging
 import numbers
 import os
+import os.path
 import pendulum
 import pickle
 import re
@@ -50,6 +51,7 @@ import textwrap
 import traceback
 import warnings
 import hashlib
+import glob
 
 import uuid
 from datetime import datetime
@@ -331,6 +333,19 @@ class DagBag(BaseDagBag, LoggingMixin):
         if filepath is None or not os.path.isfile(filepath):
             return found_dags
 
+        # if pickled dag, we return directly after adding them to our DAG
+        pickle_found = True
+        timestamp = str(os.path.getmtime(filepath)).replace(".", "_")
+        try:
+            pickle_path = filepath[:-2]+timestamp+".p"
+            pickled_dags = pickle.load(open(pickle_path, "rb"))
+            for dag in pickled_dags:
+                self.dags[dag.dag_id] = dag
+            return pickled_dags
+        except:
+            pickle_found = False
+            self.log.debug("Couldn't load pickle path: %s", pickle_path)
+
         try:
             # This failed before in what may have been a git sync
             # race condition
@@ -442,6 +457,22 @@ class DagBag(BaseDagBag, LoggingMixin):
                             file_last_changed_on_disk
 
         self.file_last_changed[filepath] = file_last_changed_on_disk
+
+        if not pickle_found:
+            pickle_path = filepath[:-2]+timestamp+".p"
+            # before, we delete unused pickles
+            pickle_regex = filepath[:-2]+"*"+".p"
+            fileList = glob.glob(pickle_regex)
+            for filePath in fileList:
+                try:
+                    os.remove(filePath)
+                except:
+                    self.log.exception("Failed to delete last pickle %s", filePath)
+            try:
+                self.log.debug("Pickling at path %s", pickle_path)
+                pickle.dump(found_dags, open(pickle_path, "wb"))
+            except:
+                self.log.debug("Failed to create new pickle %s", pickle_path)
         return found_dags
 
     @provide_session

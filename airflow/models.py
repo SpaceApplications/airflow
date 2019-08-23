@@ -332,23 +332,24 @@ class DagBag(BaseDagBag, LoggingMixin):
         if filepath is None or not os.path.isfile(filepath):
             return found_dags
 
-        path_split = filepath.rsplit('/',1)
+        path_split = os.path.split(filepath)
         pickle_dir = path_split[0]+"/__pickle_cache__"
-        file_name = path_split[1].split(".")[0]
+        file_name = os.path.splitext(path_split[1])[0]
 
         # we create pickle_dir directory
         try:
             os.mkdir(pickle_dir)
-            print("Directory " , pickle_dir ,  " Created ")
+            self.log.info("Directory " , pickle_dir ,  " created.")
         except FileExistsError:
-            self.log.exception("Directory", pickle_dir, "already exists.")
+            self.log.debug("Directory ", pickle_dir, "already exists.")
         except:
             self.log.exception(e)
 
         # if pickled dag, we return directly after adding them to our DAG
         pickle_found = True
         timestamp = str(os.path.getmtime(filepath)).replace(".", "_")
-        pickle_path = "%s/%s.%s.p" % (pickle_dir, file_name, timestamp)
+        pickle_name = ".".join((file_name, timestamp, ".p"))
+        pickle_path = os.path.join(pickle_dir, file_name)
         try:
             with open(pickle_path, "rb") as pickle_file:
                 pickled_dags = pickle.load(pickle_file)
@@ -477,7 +478,8 @@ class DagBag(BaseDagBag, LoggingMixin):
         if not pickle_found:
 
             # we delete unused pickles
-            pickle_regex = "%s/%s.*.p" % (pickle_dir, file_name)
+            pickle_regex_name = ".".join((file_name, "*", ".p"))
+            pickle_regex = "%s/%s.*.p" % (pickle_dir, pickle_regex_name)
             pickle_list = glob.glob(pickle_regex)
             for pickle_file in pickle_list:
                 try:

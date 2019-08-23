@@ -326,25 +326,41 @@ class DagBag(BaseDagBag, LoggingMixin):
         the module and look for dag objects within it.
         """
         found_dags = []
-
         # if the source file no longer exists in the DB or in the filesystem,
         # return an empty list
         # todo: raise exception?
         if filepath is None or not os.path.isfile(filepath):
             return found_dags
 
+        path_split = filepath.rsplit('/',1)
+        pickle_dir = path_split[0]+"/__pickle_cache__"
+        file_name = path_split[1].split(".")[0]
+
+        # we create pickle_dir directory
+        try:
+            os.mkdir(pickle_dir)
+            print("Directory " , pickle_dir ,  " Created ")
+        except FileExistsError:
+            self.log.exception("Directory", pickle_dir, "already exists.")
+        except:
+            self.log.exception(e)
+
         # if pickled dag, we return directly after adding them to our DAG
         pickle_found = True
         timestamp = str(os.path.getmtime(filepath)).replace(".", "_")
+        pickle_path = "%s/%s.%s.p" % (pickle_dir, file_name, timestamp)
         try:
-            pickle_path = filepath[:-2]+timestamp+".p"
-            pickled_dags = pickle.load(open(pickle_path, "rb"))
-            for dag in pickled_dags:
-                self.dags[dag.dag_id] = dag
-            return pickled_dags
-        except:
+            with open(pickle_path, "rb") as pickle_file:
+                pickled_dags = pickle.load(pickle_file)
+                for dag in pickled_dags:
+                    self.dags[dag.dag_id] = dag
+                return pickled_dags
+        except FileNotFoundError:
             pickle_found = False
-            self.log.debug("Couldn't load pickle path: %s", pickle_path)
+            self.log.exception("Couldn't load pickle path: %s", pickle_path)
+        except Exception as e:
+            pickle_found = False
+            self.log.exception(e)
 
         try:
             # This failed before in what may have been a git sync
@@ -459,20 +475,22 @@ class DagBag(BaseDagBag, LoggingMixin):
         self.file_last_changed[filepath] = file_last_changed_on_disk
 
         if not pickle_found:
-            pickle_path = filepath[:-2]+timestamp+".p"
-            # before, we delete unused pickles
-            pickle_regex = filepath[:-2]+"*"+".p"
-            fileList = glob.glob(pickle_regex)
-            for filePath in fileList:
+
+            # we delete unused pickles
+            pickle_regex = "%s/%s.*.p" % (pickle_dir, file_name)
+            pickle_list = glob.glob(pickle_regex)
+            for pickle_file in pickle_list:
                 try:
-                    os.remove(filePath)
+                    os.remove(pickle_file)
                 except:
-                    self.log.exception("Failed to delete last pickle %s", filePath)
+                    self.log.exception("Failed to delete last pickle %s", pickle_file)
             try:
                 self.log.debug("Pickling at path %s", pickle_path)
-                pickle.dump(found_dags, open(pickle_path, "wb"))
+                with open(pickle_path, "wb") as pickle_file:
+                    pickle.dump(found_dags, pickle_file)
             except:
-                self.log.debug("Failed to create new pickle %s", pickle_path)
+                self.log.exception(e)
+
         return found_dags
 
     @provide_session

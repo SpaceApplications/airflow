@@ -349,7 +349,7 @@ class DagBag(BaseDagBag, LoggingMixin):
         pickle_found = True
         timestamp = str(os.path.getmtime(filepath)).replace(".", "_")
         pickle_name = ".".join((file_name, timestamp, "p"))
-        pickle_path = os.path.join(pickle_dir, file_name)
+        pickle_path = os.path.join(pickle_dir, pickle_name)
         try:
             with open(pickle_path, "rb") as pickle_file:
                 pickled_dags = pickle.load(pickle_file)

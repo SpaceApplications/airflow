@@ -333,7 +333,7 @@ class DagBag(BaseDagBag, LoggingMixin):
             return found_dags
 
         path_split = os.path.split(filepath)
-        pickle_dir = path_split[0]+"/__pickle_cache__"
+        pickle_dir = os.path.join(path_split[0],"__pickle_cache__")
         file_name = os.path.splitext(path_split[1])[0]
 
         # we create pickle_dir directory
